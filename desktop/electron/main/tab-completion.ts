@@ -171,7 +171,7 @@ export class TabCompletion extends EventEmitter {
           });
           console.log("searching", (toolInput as { query: string }).query);
           const results = await this.jina.search(
-            (toolInput as { query: string }).query
+            (toolInput as { query: string }).query,
           );
           if (abortSignal.aborted) {
             return;
