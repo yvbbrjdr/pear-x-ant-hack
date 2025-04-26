@@ -1,19 +1,14 @@
-import { useEffect, useState } from "react";
-import UpdateElectron from "@/components/update";
-import logoVite from "./assets/logo-vite.svg";
-import logoElectron from "./assets/logo-electron.svg";
+import { useEffect, useMemo, useState } from "react";
 import "./App.css";
-import { cn } from "@/libs/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Loader, Search, Sparkle } from "lucide-react";
 
 type AIStatus = "idle" | "thinking" | "generating" | "searching";
 
 function App() {
   const [status, setStatus] = useState<AIStatus>("idle");
-  const [input, setInput] = useState("");
 
-  // Demo effect to cycle through statuses
   useEffect(() => {
     const statuses: AIStatus[] = [
       "idle",
@@ -31,41 +26,44 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
+  const [input, setInput] = useState("");
+  const [focused, setFocused] = useState(false);
 
-    // Demo: Set to thinking when input is submitted
-    setStatus("thinking");
-    console.log("User input:", input);
-    setInput("");
-
-    // Demo: Return to idle after 2 seconds
-    setTimeout(() => setStatus("idle"), 2000);
-  };
-
-  const getStatusColor = () => {
+  const placeholder = useMemo(() => {
     switch (status) {
       case "thinking":
-        return "bg-amber-500";
+        return "Thinking...";
       case "generating":
-        return "bg-green-500";
+        return "Generating...";
       case "searching":
-        return "bg-blue-500";
+        return "Searching...";
       default:
-        return "bg-gray-500";
+        return "Ask something...";
     }
-  };
+  }, []);
 
   return (
-    <div className="h-svh w-svw relative">
-      <div className="absolute top-0 left-4 flex items-center">
-        <div
-          className={cn("w-3 h-3 rounded-full mr-2", getStatusColor())}
-        ></div>
-        <p className="text-sm font-medium capitalize">
-          {status === "idle" ? "Ready" : status}
-        </p>
+    <div className="h-svh w-svw relative cursor-pointer">
+      <div className="px-2 flex items-center gap-2 h-full">
+        <Button type="submit" size="icon" className="rounded-full drag-region">
+          {status === "thinking" ? (
+            <Loader className="animate-spin size-3.5" />
+          ) : status === "generating" ? (
+            <Sparkle className="size-3.5" />
+          ) : status === "searching" ? (
+            <Search className="size-3.5" />
+          ) : (
+            <Search className="size-3.5" />
+          )}
+        </Button>
+        <Input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          placeholder={focused ? "Asking anything" : placeholder}
+          className="bg-transparent border-none shadow-none flex-1 focus-visible:ring-0 focus-visible:ring-offset-0"
+        />
       </div>
     </div>
   );

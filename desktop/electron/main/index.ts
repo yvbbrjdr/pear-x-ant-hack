@@ -42,20 +42,20 @@ if (!app.requestSingleInstanceLock()) {
 let win: BrowserWindow | null = null;
 const preload = path.join(__dirname, "../preload/index.mjs");
 const indexHtml = path.join(RENDERER_DIST, "index.html");
+const narrowWidth = 300;
+const narrowHeight = 50;
 
 async function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.workAreaSize;
-  const windowWidth = 400;
-  const windowHeight = 120;
 
   win = new BrowserWindow({
     title: "Main window",
     icon: path.join(process.env.VITE_PUBLIC, "favicon.ico"),
-    width: windowWidth,
-    height: windowHeight,
-    x: Math.round((width - windowWidth) / 2),
-    y: height - windowHeight,
+    width: narrowWidth,
+    height: narrowHeight,
+    x: width - narrowWidth - 20,
+    y: height - narrowHeight,
     resizable: false,
     movable: true,
     minimizable: false,
@@ -118,19 +118,19 @@ app.on("activate", () => {
   }
 });
 
-// New window example arg: new windows url
-ipcMain.handle("open-win", (_, arg) => {
-  const childWindow = new BrowserWindow({
-    webPreferences: {
-      preload,
-      nodeIntegration: true,
-      contextIsolation: false,
-    },
-  });
-
-  if (VITE_DEV_SERVER_URL) {
-    childWindow.loadURL(`${VITE_DEV_SERVER_URL}#${arg}`);
-  } else {
-    childWindow.loadFile(indexHtml, { hash: arg });
-  }
-});
+// // New window example arg: new windows url
+// ipcMain.handle("open-win", (_, arg) => {
+//   const childWindow = new BrowserWindow({
+//     webPreferences: {
+//       preload,
+//       nodeIntegration: true,
+//       contextIsolation: false,
+//     },
+//   });
+//
+//   if (VITE_DEV_SERVER_URL) {
+//     childWindow.loadURL(`${VITE_DEV_SERVER_URL}#${arg}`);
+//   } else {
+//     childWindow.loadFile(indexHtml, { hash: arg });
+//   }
+// });
