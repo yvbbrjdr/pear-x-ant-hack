@@ -71,7 +71,7 @@ function App() {
           ) : status === TabCompletionState.OBSERVING ? (
             <Sparkle className="size-3.5" />
           ) : status === TabCompletionState.SEARCHING ? (
-            <Loader className="size-3.5" />
+            <Loader className="animate-spin size-3.5" />
           ) : status === TabCompletionState.READY ? (
             <Search className="size-3.5" />
           ) : (
@@ -91,7 +91,8 @@ function App() {
                 exit: { y: -20, opacity: 0 },
               }}
             >
-              {status === TabCompletionState.THINKING ? (
+              {status === TabCompletionState.THINKING ||
+              status === TabCompletionState.SEARCHING ? (
                 <TextShimmer>{placeholder}</TextShimmer>
               ) : (
                 placeholder
