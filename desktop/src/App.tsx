@@ -1,8 +1,9 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
 import "./App.css";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Loader, Search, Sparkle } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { TextShimmer } from "@/components/ui/text-shimmer";
 
 enum TabCompletionState {
   IDLE = "IDLE",
@@ -77,12 +78,32 @@ function App() {
             <Search className="size-3.5" />
           )}
         </Button>
-        <Input
+        <div className="relative inline-block whitespace-nowrap">
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.div
+              key={placeholder}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              variants={{
+                initial: { y: 20, opacity: 0 },
+                animate: { y: 0, opacity: 1 },
+                exit: { y: -20, opacity: 0 },
+              }}
+            >
+              {status === TabCompletionState.THINKING ? (
+                <TextShimmer>{placeholder}</TextShimmer>
+              ) : (
+                placeholder
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+        <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder={placeholder}
           className="bg-transparent border-none shadow-none flex-1 focus-visible:ring-0 focus-visible:ring-offset-0"
         />
       </div>

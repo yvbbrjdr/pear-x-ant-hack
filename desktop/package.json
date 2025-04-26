@@ -26,6 +26,7 @@
     "electron-updater": "^6.3.9",
     "lucide": "^0.503.0",
     "lucide-react": "^0.503.0",
+    "motion": "^12.9.2",
     "node-global-key-listener": "^0.3.0",
     "screenshot-desktop": "^1.15.1",
     "tailwind-merge": "^3.2.0",
