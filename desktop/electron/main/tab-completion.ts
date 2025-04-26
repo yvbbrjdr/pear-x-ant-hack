@@ -2,10 +2,9 @@ import { EventEmitter } from "events";
 
 import { Anthropic } from "@anthropic-ai/sdk";
 import { TextBlock } from "@anthropic-ai/sdk/resources/messages";
-
-import { desktopCapturer, screen } from "electron";
-import { GlobalKeyboardListener } from "node-global-key-listener";
 import robot from "@hurdlegroup/robotjs";
+import { GlobalKeyboardListener } from "node-global-key-listener";
+import screenshot from "screenshot-desktop";
 
 enum TabCompletionState {
   IDLE = "IDLE",
@@ -148,10 +147,7 @@ export class TabCompletion extends EventEmitter {
 
 You will be provided with two pieces of information:
 
-1. A screenshot of the user's current computer screen:
-<screenshot>
-Screenshot included in this message
-</screenshot>
+1. A screenshot of the user's current computer screen.
 
 2. The user's recent keystrokes:
 <keystrokes>
@@ -188,30 +184,8 @@ Remember to keep your prediction concise and relevant to the immediate context. 
   }
 
   async captureScreenshot() {
-    try {
-      const primaryDisplay = screen.getPrimaryDisplay();
-      const { width, height } = primaryDisplay.workAreaSize;
-
-      const sources = await desktopCapturer.getSources({
-        types: ["screen"],
-        thumbnailSize: { width, height },
-      });
-
-      const mainSource = sources[0];
-
-      if (!mainSource) {
-        throw new Error("No screen source found");
-      }
-
-      const screenshot = mainSource.thumbnail;
-
-      const base64Image = screenshot.toPNG().toString("base64");
-
-      return base64Image;
-    } catch (error) {
-      console.error("Error capturing screenshot:", error);
-      throw error;
-    }
+    const s = await screenshot({ format: "png" });
+    return s.toString("base64");
   }
 }
 
