@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain } from "electron";
+import { app, BrowserWindow, shell, ipcMain, screen } from "electron";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -44,25 +44,35 @@ const preload = path.join(__dirname, "../preload/index.mjs");
 const indexHtml = path.join(RENDERER_DIST, "index.html");
 
 async function createWindow() {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.workAreaSize;
+  const windowWidth = 400;
+  const windowHeight = 120;
+
   win = new BrowserWindow({
     title: "Main window",
     icon: path.join(process.env.VITE_PUBLIC, "favicon.ico"),
+    width: windowWidth,
+    height: windowHeight,
+    x: Math.round((width - windowWidth) / 2),
+    y: height - windowHeight,
+    resizable: false,
+    movable: true,
+    minimizable: false,
+    closable: true,
+    skipTaskbar: false,
+    alwaysOnTop: true,
     webPreferences: {
       preload,
-      // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
-      // nodeIntegration: true,
-
-      // Consider using contextBridge.exposeInMainWorld
-      // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
-      // contextIsolation: false,
     },
+    frame: false,
   });
 
   if (VITE_DEV_SERVER_URL) {
     // #298
     win.loadURL(VITE_DEV_SERVER_URL);
     // Open devTool if the app is not packaged
-    win.webContents.openDevTools();
+    // win.webContents.openDevTools();
   } else {
     win.loadFile(indexHtml);
   }
