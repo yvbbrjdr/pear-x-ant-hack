@@ -13,12 +13,19 @@ enum TabCompletionState {
 
 let state: TabCompletionState = TabCompletionState.IDLE;
 
-window.ipcRenderer.on(
-  "tab-completion-state-changed",
-  (_, _state: "IDLE" | "OBSERVING" | "THINKING" | "READY") => {
-    state = _state as TabCompletionState;
-  },
-);
+declare global {
+  var _init: boolean;
+}
+
+if (!globalThis["_init"]) {
+  globalThis["_init"] = true;
+  window.ipcRenderer.on(
+    "tab-completion-state-changed",
+    (_, _state: "IDLE" | "OBSERVING" | "THINKING" | "READY") => {
+      state = _state as TabCompletionState;
+    },
+  );
+}
 
 export const useTabCompletionState = (): TabCompletionState => {
   return useSyncExternalStore(
