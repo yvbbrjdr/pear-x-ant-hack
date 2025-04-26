@@ -1,20 +1,23 @@
 import { EventEmitter } from "events";
 
 import { Anthropic } from "@anthropic-ai/sdk";
-import { TextBlock } from "@anthropic-ai/sdk/resources/messages";
+import { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import robot from "@hurdlegroup/robotjs";
 import { GlobalKeyboardListener } from "node-global-key-listener";
 import screenshot from "screenshot-desktop";
+import { JinaSearch } from "./jina";
 
 enum TabCompletionState {
   IDLE = "IDLE",
   OBSERVING = "OBSERVING",
   THINKING = "THINKING",
+  SEARCHING = "SEARCHING",
   READY = "READY",
 }
 
 export class TabCompletion extends EventEmitter {
   state: TabCompletionState;
+  jina: JinaSearch;
   anthropic: Anthropic;
   gkl: GlobalKeyboardListener;
   inputHistory: string[];
@@ -26,6 +29,9 @@ export class TabCompletion extends EventEmitter {
   constructor() {
     super();
     this.state = TabCompletionState.IDLE;
+    this.jina = new JinaSearch({
+      apiKey: process.env.JINA_API_KEY as string,
+    });
     this.anthropic = new Anthropic();
     this.gkl = new GlobalKeyboardListener();
     this.inputHistory = [];
@@ -95,42 +101,96 @@ export class TabCompletion extends EventEmitter {
     this.setState(TabCompletionState.OBSERVING);
   }
 
-  setThinking() {
-    this.setState(TabCompletionState.THINKING);
-    this.captureScreenshot()
-      .then((screenshot) => {
-        return this.anthropic.messages.create({
-          model: "claude-3-7-sonnet-latest",
-          messages: [
+  async setThinking() {
+    try {
+      this.setState(TabCompletionState.THINKING);
+      const screenshot = await this.captureScreenshot();
+      const messages: MessageParam[] = [
+        {
+          role: "user",
+          content: [
             {
-              role: "user",
-              content: [
-                {
-                  type: "image",
-                  source: {
-                    type: "base64",
-                    media_type: "image/png",
-                    data: screenshot,
-                  },
-                },
-                { type: "text", text: this.buildPrompt() },
-              ],
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: "image/png",
+                data: screenshot,
+              },
             },
+            { type: "text", text: this.buildPrompt() },
           ],
-          max_tokens: 4096,
-        });
-      })
-      .then((response) => {
-        const rawOutput = (response.content[0] as TextBlock).text;
-        this.tabCompletionText = rawOutput
-          .split("<prediction>")[1]
-          .split("</prediction>")[0]
-          .trim();
-        this.setReady();
-      })
-      .catch((error) => {
-        console.error(error);
+        },
+      ];
+      const response = await this.anthropic.messages.create({
+        model: "claude-3-7-sonnet-latest",
+        messages,
+        max_tokens: 4096,
+        tools: [
+          {
+            name: "web_search",
+            description: "Search the web for information",
+            input_schema: {
+              type: "object",
+              properties: {
+                query: {
+                  type: "string",
+                  description: "The query to search for",
+                },
+              },
+              required: ["query"],
+            },
+          },
+        ],
       });
+      const rawOutput = response.content;
+      if (rawOutput.length === 0 && rawOutput[0].type === "text") {
+        this.tabCompletionText = rawOutput[0].text
+          .split("<prediction>\n")[1]
+          .split("\n</prediction>")[0];
+      } else if (rawOutput.length > 0 && rawOutput[1].type === "tool_use") {
+        const toolUse = rawOutput[1];
+        const toolName = toolUse.name;
+        const toolInput = toolUse.input;
+        if (toolName === "web_search") {
+          this.setSearching();
+          messages.push({
+            role: "assistant",
+            content: rawOutput,
+          });
+          const results = await this.jina.search(
+            (toolInput as { query: string }).query
+          );
+          messages.push({
+            role: "user",
+            content: [
+              {
+                type: "tool_result",
+                tool_use_id: toolUse.id,
+                content: JSON.stringify(results),
+              },
+            ],
+          });
+          const response = await this.anthropic.messages.create({
+            model: "claude-3-7-sonnet-latest",
+            messages,
+            max_tokens: 4096,
+          });
+          const rawOutput2 = response.content[0];
+          if (rawOutput2.type === "text") {
+            this.tabCompletionText = rawOutput2.text
+              .split("<prediction>\n")[1]
+              .split("\n</prediction>")[0];
+          }
+        }
+      }
+      this.setReady();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  setSearching() {
+    this.setState(TabCompletionState.SEARCHING);
   }
 
   setReady() {
@@ -171,14 +231,12 @@ Based on your analysis of both the screenshot and the recent keystrokes, predict
 - A common phrase or expression relevant to the context
 - A suggested action based on the current task (e.g., "Send" for an email)
 
+If you need to search the web for information, use the "web_search" tool before making your prediction. You will provide the predictions after the tool returns results.
+
 Provide your prediction in the following format:
 <prediction>
 [Your predicted next input here]
 </prediction>
-
-<reasoning>
-[Explain your reasoning for this prediction, referencing specific elements from the screenshot and keystrokes that informed your decision]
-</reasoning>
 
 Remember to keep your prediction concise and relevant to the immediate context. If you're not confident in making a specific prediction based on the available information, it's acceptable to state that there's not enough context to make a reliable prediction.`;
   }

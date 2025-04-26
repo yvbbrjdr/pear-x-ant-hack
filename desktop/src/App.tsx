@@ -8,6 +8,7 @@ enum TabCompletionState {
   IDLE = "IDLE",
   OBSERVING = "OBSERVING",
   THINKING = "THINKING",
+  SEARCHING = "SEARCHING",
   READY = "READY",
 }
 
@@ -21,9 +22,9 @@ if (!globalThis["_init"]) {
   globalThis["_init"] = true;
   window.ipcRenderer.on(
     "tab-completion-state-changed",
-    (_, _state: "IDLE" | "OBSERVING" | "THINKING" | "READY") => {
+    (_, _state: "IDLE" | "OBSERVING" | "THINKING" | "SEARCHING" | "READY") => {
       state = _state as TabCompletionState;
-    },
+    }
   );
 }
 
@@ -35,7 +36,7 @@ export const useTabCompletionState = (): TabCompletionState => {
         window.ipcRenderer.off("tab-completion-state-changed", onStoreChange);
       };
     },
-    () => state,
+    () => state
   );
 };
 
@@ -51,6 +52,8 @@ function App() {
         return "Thinking...";
       case TabCompletionState.OBSERVING:
         return "Observing...";
+      case TabCompletionState.SEARCHING:
+        return "Searching...";
       case TabCompletionState.READY:
         return "Ready...";
       default:
@@ -66,6 +69,8 @@ function App() {
             <Loader className="animate-spin size-3.5" />
           ) : status === TabCompletionState.OBSERVING ? (
             <Sparkle className="size-3.5" />
+          ) : status === TabCompletionState.SEARCHING ? (
+            <Loader className="size-3.5" />
           ) : status === TabCompletionState.READY ? (
             <Search className="size-3.5" />
           ) : (
