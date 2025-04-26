@@ -25,6 +25,7 @@ export class TabCompletion extends EventEmitter {
   tabPressed: boolean;
   tabCompletionText: string;
   ignoreNextKey: boolean;
+  abortController: AbortController | null;
 
   constructor() {
     super();
@@ -39,6 +40,7 @@ export class TabCompletion extends EventEmitter {
     this.tabPressed = false;
     this.tabCompletionText = "";
     this.ignoreNextKey = false;
+    this.abortController = null;
   }
 
   start() {
@@ -95,16 +97,23 @@ export class TabCompletion extends EventEmitter {
     if (this.observingTimeout) {
       clearTimeout(this.observingTimeout);
     }
+    if (this.abortController) {
+      this.abortController.abort();
+    }
     this.observingTimeout = setTimeout(() => {
-      this.setThinking();
+      this.abortController = new AbortController();
+      this.setThinking(this.abortController.signal);
     }, 1000);
     this.setState(TabCompletionState.OBSERVING);
   }
 
-  async setThinking() {
+  async setThinking(abortSignal: AbortSignal) {
     try {
       this.setState(TabCompletionState.THINKING);
       const screenshot = await this.captureScreenshot();
+      if (abortSignal.aborted) {
+        return;
+      }
       const messages: MessageParam[] = [
         {
           role: "user",
@@ -142,6 +151,9 @@ export class TabCompletion extends EventEmitter {
           },
         ],
       });
+      if (abortSignal.aborted) {
+        return;
+      }
       const rawOutput = response.content;
       if (rawOutput.length === 0 && rawOutput[0].type === "text") {
         this.tabCompletionText = rawOutput[0].text
@@ -160,6 +172,9 @@ export class TabCompletion extends EventEmitter {
           const results = await this.jina.search(
             (toolInput as { query: string }).query
           );
+          if (abortSignal.aborted) {
+            return;
+          }
           messages.push({
             role: "user",
             content: [
@@ -175,6 +190,9 @@ export class TabCompletion extends EventEmitter {
             messages,
             max_tokens: 4096,
           });
+          if (abortSignal.aborted) {
+            return;
+          }
           const rawOutput2 = response.content[0];
           if (rawOutput2.type === "text") {
             this.tabCompletionText = rawOutput2.text
