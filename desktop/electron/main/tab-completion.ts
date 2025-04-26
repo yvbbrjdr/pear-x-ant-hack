@@ -3,7 +3,7 @@ import { EventEmitter } from "events";
 import { Anthropic } from "@anthropic-ai/sdk";
 import { TextBlock } from "@anthropic-ai/sdk/resources/messages";
 
-import { desktopCapturer } from "electron";
+import { desktopCapturer, screen } from "electron";
 import { GlobalKeyboardListener } from "node-global-key-listener";
 import robot from "@hurdlegroup/robotjs";
 
@@ -100,7 +100,6 @@ export class TabCompletion extends EventEmitter {
     this.setState(TabCompletionState.THINKING);
     this.captureScreenshot()
       .then((screenshot) => {
-        console.log(screenshot.slice(0, 100));
         return this.anthropic.messages.create({
           model: "claude-3-7-sonnet-latest",
           messages: [
@@ -190,8 +189,12 @@ Remember to keep your prediction concise and relevant to the immediate context. 
 
   async captureScreenshot() {
     try {
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width, height } = primaryDisplay.workAreaSize;
+
       const sources = await desktopCapturer.getSources({
         types: ["screen"],
+        thumbnailSize: { width, height },
       });
 
       const mainSource = sources[0];
