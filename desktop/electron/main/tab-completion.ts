@@ -155,11 +155,11 @@ export class TabCompletion extends EventEmitter {
         return;
       }
       const rawOutput = response.content;
-      if (rawOutput.length === 0 && rawOutput[0].type === "text") {
+      if (rawOutput.length === 1 && rawOutput[0].type === "text") {
         this.tabCompletionText = rawOutput[0].text
           .split("<prediction>\n")[1]
           .split("\n</prediction>")[0];
-      } else if (rawOutput.length > 0 && rawOutput[1].type === "tool_use") {
+      } else if (rawOutput.length > 1 && rawOutput[1].type === "tool_use") {
         const toolUse = rawOutput[1];
         const toolName = toolUse.name;
         const toolInput = toolUse.input;
@@ -169,6 +169,7 @@ export class TabCompletion extends EventEmitter {
             role: "assistant",
             content: rawOutput,
           });
+          console.log("searching", (toolInput as { query: string }).query);
           const results = await this.jina.search(
             (toolInput as { query: string }).query
           );
@@ -249,7 +250,7 @@ Based on your analysis of both the screenshot and the recent keystrokes, predict
 - A common phrase or expression relevant to the context
 - A suggested action based on the current task (e.g., "Send" for an email)
 
-If you need to search the web for information, use the "web_search" tool before making your prediction. You will provide the predictions after the tool returns results.
+If you need to search the web for information, use the "web_search" tool before making your prediction. You will provide the predictions after the tool returns results. If you don't need to search the web, you can make your prediction without using the tool.
 
 Provide your prediction in the following format:
 <prediction>
