@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import os from "node:os";
 import { update } from "./update";
+import { tabCompletion } from "./tab-completion";
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -134,3 +135,13 @@ app.on("activate", () => {
 //     childWindow.loadFile(indexHtml, { hash: arg });
 //   }
 // });
+
+tabCompletion.start();
+
+tabCompletion.on("tab-pressed", (text) => {
+  console.log("tab-pressed", text);
+});
+
+tabCompletion.on("state-changed", (state) => {
+  console.log("state-changed", state);
+});
