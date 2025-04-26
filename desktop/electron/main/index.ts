@@ -85,6 +85,10 @@ async function createWindow() {
     win?.webContents.send("main-process-message", new Date().toLocaleString());
   });
 
+  win.on("resize", () => {
+    win!.setSize(narrowWidth, narrowHeight);
+  });
+
   // Make all links open with the browser, not with the application
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith("https:")) shell.openExternal(url);
@@ -138,10 +142,6 @@ app.on("activate", () => {
 
 tabCompletion.start();
 
-tabCompletion.on("tab-pressed", (text) => {
-  console.log("tab-pressed", text);
-});
-
 tabCompletion.on("state-changed", (state) => {
-  console.log("state-changed", state);
+  win?.webContents.send("tab-completion-state-changed", state);
 });
