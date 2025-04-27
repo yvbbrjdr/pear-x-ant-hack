@@ -3,8 +3,11 @@ import { EventEmitter } from "events";
 import { Anthropic } from "@anthropic-ai/sdk";
 import { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import robot from "@hurdlegroup/robotjs";
+import { clipboard } from "electron";
 import { GlobalKeyboardListener } from "node-global-key-listener";
 import screenshot from "screenshot-desktop";
+import sharp from "sharp";
+
 import { JinaSearch } from "./jina";
 
 enum TabCompletionState {
@@ -76,7 +79,8 @@ export class TabCompletion extends EventEmitter {
           if (this.tabPressed) {
             this.emit("tab-pressed", this.tabCompletionText);
             this.ignoreNextKey = true;
-            robot.typeString(this.tabCompletionText);
+            clipboard.writeText(this.tabCompletionText);
+            robot.keyTap("v", "command");
             this.ignoreNextKey = false;
             this.tabPressed = false;
             this.tabCompletionText = "";
@@ -171,7 +175,7 @@ export class TabCompletion extends EventEmitter {
           });
           console.log("searching", (toolInput as { query: string }).query);
           const results = await this.jina.search(
-            (toolInput as { query: string }).query,
+            (toolInput as { query: string }).query
           );
           if (abortSignal.aborted) {
             return;
@@ -250,18 +254,32 @@ Based on your analysis of both the screenshot and the recent keystrokes, predict
 - A common phrase or expression relevant to the context
 - A suggested action based on the current task (e.g., "Send" for an email)
 
-If you need to search the web for information, use the "web_search" tool before making your prediction. You will provide the predictions after the tool returns results. If you don't need to search the web, you can make your prediction without using the tool.
+If you need to search the web for information, such as current events, news, or stock prices, use the "web_search" tool before making your prediction. You will provide the predictions after the tool returns results. For easy queries, you should never use the tool.
 
 Provide your prediction in the following format:
 <prediction>
 [Your predicted next input here]
 </prediction>
 
-Remember to keep your prediction concise and relevant to the immediate context. If you're not confident in making a specific prediction based on the available information, it's acceptable to state that there's not enough context to make a reliable prediction.`;
+Remember to keep your prediction concise and relevant to the immediate context. If you're not confident in making a specific prediction based on the available information, it's acceptable to state that there's not enough context to make a reliable prediction.
+
+Do not output anything other than the prediction or tool call.`;
   }
 
   async captureScreenshot() {
     const s = await screenshot({ format: "png" });
+    try {
+      const resizedBuffer = await sharp(s)
+        .resize(1920, 1080, {
+          fit: sharp.fit.contain,
+          background: { r: 0, g: 0, b: 0, alpha: 0 },
+        })
+        .png()
+        .toBuffer();
+      return resizedBuffer.toString("base64");
+    } catch (error) {
+      console.error("Error resizing screenshot:", error);
+    }
     return s.toString("base64");
   }
 }
