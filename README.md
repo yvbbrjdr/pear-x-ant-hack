@@ -1,4 +1,5 @@
-Caret 🚀
+# Caret 🚀
+
 Caret is a context-aware productivity agent designed for knowledge workers. It captures your current desktop screen, predicts your next actions, and helps you auto-complete tasks with a simple hotkey (double-tap Option key). 
 
 ✨ Key Features
